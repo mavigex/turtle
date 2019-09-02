@@ -140,6 +140,7 @@ function _addEmptyMetrics(metrics: IMetric[]) {
 
   const nonEmptyMetrics = _.omitBy(state.registeredMetrics, ({ addEmpty }) => !addEmpty);
   const toAdd = _.difference(Object.keys(nonEmptyMetrics), Array.from(seenMetrics));
+  //@ts-ignore
   toAdd.forEach((name) => addMetricData({ name, value: 0, explicitName: true }));
 }
 

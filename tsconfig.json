@@ -6,7 +6,7 @@
     "sourceMap": true,
     "inlineSources": true,
     "outDir": "./build",
-    "strict": true,
+    "strict": false,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
