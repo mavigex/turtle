@@ -2,6 +2,12 @@
 
 SDKMANAGER=$ANDROID_HOME/tools/bin/sdkmanager
 
+if [[ "$SDKMANAGER_ARGUMENT" != "" ]]; then 
+  SDKMANAGER=$ANDROID_HOME/tools/bin/sdkmanager\ $SDKMANAGER_ARGUMENT;
+else
+  SDKMANAGER=$ANDROID_HOME/tools/bin/sdkmanager;
+fi
+
 yes | $SDKMANAGER --licenses > /dev/null
 if [[ "$1" = "--install-all-platforms" ]]; then
   yes | $SDKMANAGER \
