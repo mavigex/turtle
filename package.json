@@ -1,6 +1,6 @@
 {
   "name": "turtle-cli",
-  "version": "0.11.2",
+  "version": "0.12.2",
   "description": "The command-line tool for building standalone Expo apps",
   "preferGlobal": true,
   "scripts": {
@@ -100,7 +100,7 @@
   },
   "dependencies": {
     "@expo/spawn-async": "^1.4.2",
-    "@expo/xdl": "56.2.1",
+    "@expo/xdl": "56.2.2-alpha.2",
     "@google-cloud/logging-bunyan": "^0.9.5",
     "async-retry": "^1.2.1",
     "aws-sdk": "^2.226.1",

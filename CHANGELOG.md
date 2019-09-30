@@ -5,6 +5,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+
+## [0.12.2] - 2019-09-27
+### Changed
+- Updated Android shell app for SDK 35 to fix crash on Android <=7 due to battery module
+
+## [0.12.1] - 2019-09-20
+### Changed
+- Updated iOS shell apps for SDK 33 and 34 to fix iOS 13 issues with fishhook, notification tokens, and ShareSheet
+- Updated iOS shell app for SDK 35 with a minor fix
+
+## [0.12.0] - 2019-09-19
+### Added
+- Support for SDK 35 iOS and Android builds.
+### Removed
+- Support for SDK 27-30 iOS and Android builds.
+
+## [0.11.3] - 2019-09-19
+### Changed
+- Updated SDK34 Android shell app with `expo-branch` fixes.
+
 ## [0.11.2] - 2019-08-21
 ### Added
 - Support for GoogleService-Info.plist (>=34.0.0).
