@@ -5,7 +5,6 @@ import { ExponentTools } from '@expo/xdl';
 import fs from 'fs-extra';
 import _which from 'which';
 
-import ensureAndroidNDKIsPresent from 'turtle/bin/setup/android/ndk';
 import ensureAndroidSDKIsPresent from 'turtle/bin/setup/android/sdk';
 import { checkSystem, ensureShellAppIsPresent } from 'turtle/bin/setup/utils/common';
 import { IToolDefinition } from 'turtle/bin/setup/utils/toolsDetector';
@@ -15,6 +14,7 @@ import { PLATFORMS } from 'turtle/constants';
 import logger from 'turtle/logger';
 
 const which = util.promisify(_which);
+const JAVA_REQUIRED_VERSION = 8;
 const REQUIRED_TOOLS: IToolDefinition[] = [
   {
     command: 'bash',
@@ -22,16 +22,30 @@ const REQUIRED_TOOLS: IToolDefinition[] = [
   },
   {
     command: 'javac',
-    missingDescription: 'Please install JDK (version 8 or newer) - check https://jdk.java.net/',
+    missingDescription:
+      `Please install JDK 8 - keep in mind that other versions are not supported by Android`,
     testFn: async () => {
-      const { status, stdout } = await ExponentTools.spawnAsyncThrowError(
-        'javac',
+      const { status, stdout, stderr } = await ExponentTools.spawnAsyncThrowError(
+        'java',
         ['-version'],
         { stdio: 'pipe' },
       );
       if (stdout.match(/no java runtime present/i)) {
         return false;
       }
+
+      const matchResult = stderr.match(/.*version "(.*)"/);
+      if (matchResult) {
+        const [, currentFullJavaVersion] = matchResult;
+        const javaMajorVersionPosition = currentFullJavaVersion.startsWith('1.') ? 1 : 0;
+        const javaMajorVersion = Number(currentFullJavaVersion.split('.')[javaMajorVersionPosition]);
+        if (javaMajorVersion !== JAVA_REQUIRED_VERSION) {
+          throw new Error(`You're on Java ${currentFullJavaVersion}, please install version ${JAVA_REQUIRED_VERSION}`);
+        }
+      } else {
+        logger.warn(`Couldn't find Java version number, assuming you're on Java ${JAVA_REQUIRED_VERSION}...`);
+      }
+
       return status === 0;
     },
   },
@@ -54,9 +68,8 @@ export default async function setup(sdkVersion?: string) {
 async function prepareAndroidEnv() {
   await fs.ensureDir(config.directories.androidDependenciesDir);
   const sdkConfig = await ensureAndroidSDKIsPresent();
-  const ndkConfig = await ensureAndroidNDKIsPresent();
-  _setEnvVars({ ...sdkConfig.envVars, ...ndkConfig.envVars });
-  _alterPath([...sdkConfig.path, ...sdkConfig.path]);
+  _setEnvVars(sdkConfig.envVars);
+  _alterPath(sdkConfig.path);
 }
 
 function formatShellAppTarballUriPath(sdkMajorVersion: string) {
@@ -88,7 +101,9 @@ async function _shellAppPostDownloadAction(sdkVersion: string, workingdir: strin
 async function _installNodeModules(cwd: string) {
   l.info(`installing dependencies in ${cwd} directory...`);
   const command = await _shouldUseYarnOrNpm();
-  await ExponentTools.spawnAsyncThrowError(command, ['install'], {
+  // Keep in sync with /Dockerfile
+  // --prod requires --ignore-scripts (otherwise expo-yarn-workspaces errors as missing)
+  await ExponentTools.spawnAsyncThrowError(command, ['install', '--ignore-scripts', '--production'], {
     pipeToLogger: true,
     loggerFields: LOGGER_FIELDS,
     cwd,

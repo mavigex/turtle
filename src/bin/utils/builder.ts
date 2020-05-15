@@ -1,3 +1,6 @@
+import _url from 'url';
+
+import { ConfigError, getExpoSDKVersion } from '@expo/config';
 import { ExponentTools } from '@expo/xdl';
 import _ from 'lodash';
 import uuid from 'uuid';
@@ -54,21 +57,29 @@ export function createBuilderAction({
         );
       }
 
+      if (cmd.publicUrl) {
+        const parsedPublicUrl = _url.parse(cmd.publicUrl);
+        if (parsedPublicUrl.protocol !== 'https:') {
+          throw new ErrorWithCommandHelp('--public-url is invalid - only HTTPS urls are supported');
+        }
+      }
+
+      const projectAbsoluteDir = ProjectUtils.resolveAbsoluteDir(projectDirArg);
       const args = {
         releaseChannel: cmd.releaseChannel || 'default',
         buildType: cmd.type,
         buildMode: cmd.mode,
         username: userData.username || 'anonymous',
-        projectDir: ProjectUtils.resolveAbsoluteDir(projectDirArg),
+        projectDir: projectAbsoluteDir,
         publicUrl: cmd.publicUrl,
       };
 
       const appJSON = await ProjectUtils.loadAppJSON(projectDirArg, cmd.config);
-      const sdkVersion = _.get(appJSON, 'expo.sdkVersion');
+      const sdkVersion = getExpoSDKVersionSafely(projectAbsoluteDir, appJSON);
       await setup(platform, sdkVersion);
       const credentials = await prepareCredentials(cmd);
       const rawJob = {
-        ...await buildJobObject(platform, appJSON, args, credentials),
+        ...await buildJobObject(platform, appJSON, args, credentials, sdkVersion),
         ...cmd.buildDir && { fakeUploadDir: ProjectUtils.resolveAbsoluteDir(cmd.buildDir) },
         ...cmd.output && { fakeUploadBuildPath: ProjectUtils.resolveAbsoluteDir(cmd.output) },
       };
@@ -86,12 +97,29 @@ export function createBuilderAction({
   };
 }
 
+function getExpoSDKVersionSafely(projectDir: string, appJSON?: any) {
+  try {
+    return getExpoSDKVersion(projectDir, appJSON && appJSON.expo);
+  } catch (err) {
+    if (err instanceof ConfigError) {
+      throw new Error(
+        'Couldn\'t find the `expo` library in your project\'s dependencies.'
+        + ' Have you run \'yarn install\' or \'npm install\' for your project?',
+      );
+    } else {
+      throw err;
+    }
+  }
+}
+
 const buildJobObject = async (
   platform: 'android' | 'ios',
   appJSON: any,
   { releaseChannel, buildType, buildMode, username, publicUrl, projectDir }: any,
   credentials: any,
+  sdkVersion: string,
 ) => {
+  const experienceName = `@${_.get(appJSON, 'expo.owner', username)}/${_.get(appJSON, 'expo.slug')}`;
   const job = {
     config: {
       ..._.get(appJSON, `expo.${platform}.config`, {}),
@@ -105,14 +133,14 @@ const buildJobObject = async (
     id: uuid.v4(),
     platform,
     projectDir,
-    sdkVersion: _.get(appJSON, 'expo.sdkVersion'),
-    experienceName: `@${username}/${_.get(appJSON, 'expo.slug')}`,
+    sdkVersion,
+    experienceName,
     ...(credentials && { credentials }),
   };
   const url = getExperienceUrl(job.experienceName, job.config.publicUrl);
 
   const manifest = await ExponentTools.getManifestAsync(url, {
-    'Exponent-SDK-Version': _.get(appJSON, 'expo.sdkVersion'),
+    'Exponent-SDK-Version': sdkVersion,
     'Exponent-Platform': platform,
     'Expo-Release-Channel': releaseChannel,
     'Accept': 'application/expo+json,application/json',

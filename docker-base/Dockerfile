@@ -17,6 +17,7 @@ RUN dpkg --add-architecture i386 && \
   build-essential\
   bzip2:i386\
   file\
+  jq\
   lib32ncurses5\
   lib32z1\
   libc6:i386\
@@ -31,7 +32,7 @@ RUN dpkg --add-architecture i386 && \
   apt-get clean
 
 ENV NPM_CONFIG_LOGLEVEL warn
-ENV NODE_VERSION 8.12.0
+ENV NODE_VERSION 12.16.1
 
 RUN curl -SLO "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.xz" \
   && tar -xJf "node-v$NODE_VERSION-linux-x64.tar.xz" -C /usr/local --strip-components=1 \
@@ -54,39 +55,33 @@ ENV PATH ${ANDROID_HOME}/tools:${PATH}
 ENV PATH ${ANDROID_HOME}/tools/bin:${PATH}
 ENV PATH ${ANDROID_HOME}/build-tools/28.0.3/:${PATH}
 
-ADD scripts/android/configureAndroidSdk.sh /tmp/configureAndroidSdk.sh
+ADD configureAndroidSdk.sh /tmp/configureAndroidSdk.sh
 RUN /tmp/configureAndroidSdk.sh --install-all-platforms
-
-# Install Android NDK
-ENV ANDROID_NDK_VERSION android-ndk-r10e
-ENV ANDROID_NDK_FILE ${ANDROID_NDK_VERSION}-linux-x86_64.bin
-ENV ANDROID_NDK_URL https://dl.google.com/android/ndk/${ANDROID_NDK_FILE}
-ENV ANDROID_NDK /opt/${ANDROID_NDK_VERSION}
-ENV PATH $ANDROID_NDK:$PATH
-
-# i have no clue why some of this is here, but it's working elsewhere
-# it appears to install the NDK version expo needs, so that's cool
-RUN mkdir /ndk_setup && cd /ndk_setup && \
-  curl -L ${ANDROID_NDK_URL} > ${ANDROID_NDK_FILE} && \
-  chmod +x ${ANDROID_NDK_FILE} && \
-  sync && \
-  ./${ANDROID_NDK_FILE} && \
-  mv ./${ANDROID_NDK_VERSION} ${ANDROID_NDK} && \
-  cp -R \
-  ${ANDROID_NDK}/toolchains/arm-linux-androideabi-4.8/prebuilt/linux-x86_64 \
-  ${ANDROID_NDK}/toolchains/arm-linux-androideabi-4.8/prebuilt/linux-x86 && \
-  cp -R \
-  ${ANDROID_NDK}/toolchains/x86-4.8/prebuilt/linux-x86_64 \
-  ${ANDROID_NDK}/toolchains/x86-4.8/prebuilt/linux-x86 && \
-  cd && rm -rf /ndk_setup
 
 # Support Gradle
 ENV TERM dumb
 
-# Install gradle
-RUN wget https://services.gradle.org/distributions/gradle-4.4-all.zip
-RUN unzip -qq gradle-4.4-all.zip
-RUN mv gradle-4.4 /usr/local
-RUN rm gradle-4.4-all.zip
-ENV GRADLE_HOME /usr/local/gradle-4.4
+# Install gradle 5.6.3
+RUN wget https://services.gradle.org/distributions/gradle-5.6.3-all.zip
+RUN unzip -qq gradle-5.6.3-all.zip
+RUN cp -r gradle-5.6.3 /usr/local
+
+RUN mkdir -p /root/.gradle/wrapper/dists/gradle-5.6.3-all/7wpcz6s7ut7bllr9k6e1hazxc
+RUN mv gradle-5.6.3-all.zip /root/.gradle/wrapper/dists/gradle-5.6.3-all/7wpcz6s7ut7bllr9k6e1hazxc
+RUN mv gradle-5.6.3 /root/.gradle/wrapper/dists/gradle-5.6.3-all/7wpcz6s7ut7bllr9k6e1hazxc
+RUN touch /root/.gradle/wrapper/dists/gradle-5.6.3-all/7wpcz6s7ut7bllr9k6e1hazxc/gradle-5.6.3-all.zip.ok
+RUN touch /root/.gradle/wrapper/dists/gradle-5.6.3-all/7wpcz6s7ut7bllr9k6e1hazxc/gradle-5.6.3-all.zip.lck
+RUN chmod 755 /root/.gradle/wrapper/dists/gradle-5.6.3-all/7wpcz6s7ut7bllr9k6e1hazxc/gradle-5.6.3/bin/gradle
+
+ENV GRADLE_HOME /usr/local/gradle-5.6.3
 ENV PATH ${GRADLE_HOME}/bin:$PATH
+
+# Install gradle 4.10.2
+RUN wget https://services.gradle.org/distributions/gradle-4.10.2-all.zip
+RUN mkdir -p /root/.gradle/wrapper/dists/gradle-4.10.2-all/9fahxiiecdb76a5g3aw9oi8rv
+RUN unzip -qq gradle-4.10.2-all.zip
+RUN mv gradle-4.10.2-all.zip /root/.gradle/wrapper/dists/gradle-4.10.2-all/9fahxiiecdb76a5g3aw9oi8rv
+RUN mv gradle-4.10.2 /root/.gradle/wrapper/dists/gradle-4.10.2-all/9fahxiiecdb76a5g3aw9oi8rv
+RUN touch /root/.gradle/wrapper/dists/gradle-4.10.2-all/9fahxiiecdb76a5g3aw9oi8rv/gradle-4.10.2-all.zip.ok
+RUN touch /root/.gradle/wrapper/dists/gradle-4.10.2-all/9fahxiiecdb76a5g3aw9oi8rv/gradle-4.10.2-all.zip.lck
+RUN chmod 755 /root/.gradle/wrapper/dists/gradle-4.10.2-all/9fahxiiecdb76a5g3aw9oi8rv/gradle-4.10.2/bin/gradle
